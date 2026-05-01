@@ -14,16 +14,262 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      haul_requests: {
+        Row: {
+          created_at: string
+          dropoff_address: string
+          dropoff_lat: number | null
+          dropoff_lng: number | null
+          estimated_price: number | null
+          hauler_id: string | null
+          id: string
+          item_description: string
+          photo_url: string | null
+          pickup_address: string
+          pickup_lat: number | null
+          pickup_lng: number | null
+          size_category: Database["public"]["Enums"]["size_category"]
+          status: Database["public"]["Enums"]["haul_status"]
+          timeframe: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dropoff_address: string
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
+          estimated_price?: number | null
+          hauler_id?: string | null
+          id?: string
+          item_description: string
+          photo_url?: string | null
+          pickup_address: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          size_category?: Database["public"]["Enums"]["size_category"]
+          status?: Database["public"]["Enums"]["haul_status"]
+          timeframe?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dropoff_address?: string
+          dropoff_lat?: number | null
+          dropoff_lng?: number | null
+          estimated_price?: number | null
+          hauler_id?: string | null
+          id?: string
+          item_description?: string
+          photo_url?: string | null
+          pickup_address?: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          size_category?: Database["public"]["Enums"]["size_category"]
+          status?: Database["public"]["Enums"]["haul_status"]
+          timeframe?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      hauler_locations: {
+        Row: {
+          id: string
+          lat: number
+          lng: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          lat: number
+          lng: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          lat?: number
+          lng?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          request_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          request_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          request_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "haul_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          request_id: string
+          reviewee_id: string
+          reviewer_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          request_id: string
+          reviewee_id: string
+          reviewer_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          request_id?: string
+          reviewee_id?: string
+          reviewer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "haul_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vehicles: {
+        Row: {
+          capacity: string | null
+          created_at: string
+          description: string | null
+          id: string
+          photo_url: string | null
+          user_id: string
+          vehicle_type: string
+        }
+        Insert: {
+          capacity?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          photo_url?: string | null
+          user_id: string
+          vehicle_type: string
+        }
+        Update: {
+          capacity?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          photo_url?: string | null
+          user_id?: string
+          vehicle_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "user" | "hauler"
+      haul_status:
+        | "open"
+        | "claimed"
+        | "en_route_pickup"
+        | "at_pickup"
+        | "in_transit"
+        | "delivered"
+        | "cancelled"
+      size_category: "small" | "medium" | "large" | "extra_large"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +396,18 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["user", "hauler"],
+      haul_status: [
+        "open",
+        "claimed",
+        "en_route_pickup",
+        "at_pickup",
+        "in_transit",
+        "delivered",
+        "cancelled",
+      ],
+      size_category: ["small", "medium", "large", "extra_large"],
+    },
   },
 } as const
