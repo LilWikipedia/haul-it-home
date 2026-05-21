@@ -27,12 +27,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userRole, setUserRole] = useState<"user" | "hauler" | null>(null);
 
   const fetchUserRole = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", userId)
-      .maybeSingle();
-    setUserRole(data?.role as "user" | "hauler" | null);
+      .eq("user_id", userId);
+    if (error) {
+      console.error("fetchUserRole error", error);
+      setUserRole(null);
+      return;
+    }
+    // Prefer hauler if user has both roles
+    const roles = (data ?? []).map((r) => r.role as "user" | "hauler");
+    const picked = roles.includes("hauler") ? "hauler" : roles.includes("user") ? "user" : null;
+    setUserRole(picked);
   };
 
   useEffect(() => {
