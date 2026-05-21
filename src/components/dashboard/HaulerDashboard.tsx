@@ -29,11 +29,16 @@ const HaulerDashboard = () => {
   const [claiming, setClaiming] = useState<string | null>(null);
 
   const fetchJobs = async () => {
-    if (!user) return;
-    const [{ data: open }, { data: mine }] = await Promise.all([
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    const [{ data: open, error: openError }, { data: mine, error: mineError }] = await Promise.all([
       supabase.from("haul_requests").select("*").eq("status", "open").order("created_at", { ascending: false }),
       supabase.from("haul_requests").select("*").eq("hauler_id", user.id).not("status", "in", "(\"delivered\",\"cancelled\")").order("created_at", { ascending: false }),
     ]);
+    if (openError) console.error("open jobs fetch error", openError);
+    if (mineError) console.error("my jobs fetch error", mineError);
     setOpenJobs((open as HaulRequest[]) || []);
     setMyJobs((mine as HaulRequest[]) || []);
     setLoading(false);
