@@ -30,11 +30,16 @@ const Onboarding = () => {
     if (!user) return;
     setLoading(true);
     try {
-      // Update profile phone
-      await supabase.from("profiles").update({ phone }).eq("user_id", user.id);
-      
-      // Insert role
-      const { error } = await supabase.from("user_roles").insert({ user_id: user.id, role: role! });
+      // Ensure profile row exists, then set phone
+      await supabase.from("profiles").upsert(
+        { user_id: user.id, phone, full_name: user.user_metadata?.full_name ?? "" },
+        { onConflict: "user_id" }
+      );
+
+      // Insert role (ignore duplicate)
+      const { error } = await supabase
+        .from("user_roles")
+        .upsert({ user_id: user.id, role: role! }, { onConflict: "user_id,role" });
       if (error) throw error;
 
       if (role === "hauler") {
