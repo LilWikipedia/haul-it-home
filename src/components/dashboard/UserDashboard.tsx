@@ -34,13 +34,17 @@ const UserDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     const fetchRequests = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("haul_requests")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
+      if (error) console.error("user requests fetch error", error);
       setRequests((data as HaulRequest[]) || []);
       setLoading(false);
     };
