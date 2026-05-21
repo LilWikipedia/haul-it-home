@@ -23,7 +23,10 @@ const History = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     const fetch = async () => {
       let query = supabase.from("haul_requests").select("*").order("created_at", { ascending: false });
       if (userRole === "hauler") {
@@ -32,7 +35,8 @@ const History = () => {
         query = query.eq("user_id", user.id);
       }
       query = query.in("status", ["delivered", "cancelled"]);
-      const { data } = await query;
+      const { data, error } = await query;
+      if (error) console.error("history fetch error", error);
       setRequests((data as HaulRequest[]) || []);
       setLoading(false);
     };
