@@ -19,13 +19,19 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     const fetch = async () => {
-      const [{ data: p }, { data: v }, { data: r }] = await Promise.all([
+      const [{ data: p, error: profileError }, { data: v, error: vehicleError }, { data: r, error: reviewsError }] = await Promise.all([
         supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("vehicles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("reviews").select("rating").eq("reviewee_id", user.id),
       ]);
+      if (profileError) console.error("profile fetch error", profileError);
+      if (vehicleError) console.error("vehicle fetch error", vehicleError);
+      if (reviewsError) console.error("reviews fetch error", reviewsError);
       if (p) setProfile({ full_name: p.full_name || "", phone: p.phone || "", avatar_url: p.avatar_url || "" });
       if (v) setVehicle({ vehicle_type: v.vehicle_type || "", description: v.description || "", capacity: v.capacity || "" });
       setReviews((r as { rating: number }[]) || []);
