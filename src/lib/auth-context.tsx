@@ -49,6 +49,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!mounted) return;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+      setUserRole((currentRole) => (nextSession?.user ? currentRole : null));
+      setRoleLoading(!!nextSession?.user);
       setAuthLoading(false);
     };
 
@@ -102,6 +104,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loading = authLoading || roleLoading;
 
   const signOut = async () => {
+    setAuthLoading(true);
+    setRoleLoading(false);
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
