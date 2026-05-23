@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Truck, Mail, Lock, User } from "lucide-react";
+import logo from "@/assets/yeehaul-logo.png";
 import { toast } from "sonner";
 
 const Login = () => {
@@ -71,10 +72,8 @@ const Login = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
-              <Truck className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold font-['Space_Grotesk']">HaulNow</span>
+            <img src={logo} alt="YeeHaul" className="h-10 w-10" width={40} height={40} />
+            <span className="text-xl font-bold font-['Space_Grotesk']">YeeHaul</span>
           </div>
           <CardTitle>{mode === "login" ? "Welcome back" : "Create your account"}</CardTitle>
           <CardDescription>

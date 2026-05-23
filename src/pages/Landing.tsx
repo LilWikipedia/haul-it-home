@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Truck, Package, MapPin, Star, ArrowRight, Shield } from "lucide-react";
+import logo from "@/assets/yeehaul-logo.png";
 import { Button } from "@/components/ui/button";
 
 const Landing = () => {
@@ -8,10 +9,8 @@ const Landing = () => {
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
         <div className="flex items-center gap-2">
-          <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
-            <Truck className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="text-xl font-bold font-['Space_Grotesk']">HaulNow</span>
+          <img src={logo} alt="YeeHaul" className="h-10 w-10" width={40} height={40} />
+          <span className="text-xl font-bold font-['Space_Grotesk']">YeeHaul</span>
         </div>
         <div className="flex items-center gap-3">
           <Link to="/login">
@@ -111,7 +110,7 @@ const Landing = () => {
       {/* CTA */}
       <section className="px-6 py-20">
         <div className="max-w-4xl mx-auto bg-primary rounded-3xl p-12 text-center text-primary-foreground">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to haul?</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to yeehaul?</h2>
           <p className="text-primary-foreground/80 mb-8 max-w-md mx-auto">
             Whether you need something moved or you've got a truck and want to earn, HaulNow has you covered.
           </p>
