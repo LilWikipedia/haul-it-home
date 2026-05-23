@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
 import { Truck, Home, PlusCircle, MapPin, User, History, MessageSquare, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logo from "@/assets/yeehaul-logo.png";
 
 const AppLayout = ({ children }: { children: ReactNode }) => {
   const { userRole, signOut, user } = useAuth();
