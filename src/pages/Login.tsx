@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Truck, Mail, Lock, User } from "lucide-react";
+import logo from "@/assets/yeehaul-logo.png";
 import { toast } from "sonner";
 
 const Login = () => {
