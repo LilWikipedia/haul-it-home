@@ -112,7 +112,7 @@ const Landing = () => {
         <div className="max-w-4xl mx-auto bg-primary rounded-3xl p-12 text-center text-primary-foreground">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to yeehaul?</h2>
           <p className="text-primary-foreground/80 mb-8 max-w-md mx-auto">
-            Whether you need something moved or you've got a truck and want to earn, HaulNow has you covered.
+            Whether you need something moved or you've got a truck and want to earn, YeeHaul has you covered.
           </p>
           <Link to="/login?signup=true">
             <Button size="lg" variant="secondary" className="text-base px-8">
@@ -126,10 +126,10 @@ const Landing = () => {
       <footer className="px-6 py-8 border-t">
         <div className="max-w-7xl mx-auto flex items-center justify-between text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Truck className="h-4 w-4 text-primary" />
-            <span className="font-semibold text-foreground">HaulNow</span>
+            <img src={logo} alt="YeeHaul" className="h-4 w-4" width={16} height={16} />
+            <span className="font-semibold text-foreground">YeeHaul</span>
           </div>
-          <p>&copy; {new Date().getFullYear()} HaulNow. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} YeeHaul. All rights reserved.</p>
         </div>
       </footer>
     </div>
