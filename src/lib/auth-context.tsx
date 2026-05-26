@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,11 +23,14 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [roleLoading, setRoleLoading] = useState(true);
+  // Start with loading=true; we resolve it only after BOTH auth and role are settled
+  const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<"user" | "hauler" | null>(null);
 
-  const fetchUserRole = useCallback(async (userId: string) => {
+  // Use a ref to cancel in-flight role fetches when auth state changes
+  const roleFetchAbortRef = useRef<{ cancelled: boolean } | null>(null);
+
+  const fetchUserRole = useCallback(async (userId: string): Promise<"user" | "hauler" | null> => {
     const { data, error } = await supabase
       .from("user_roles")
       .select("role")
@@ -45,73 +48,69 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    const applySession = (nextSession: Session | null) => {
+    const resolveSession = async (nextSession: Session | null) => {
       if (!mounted) return;
+
+      // Cancel any previous in-flight role fetch
+      if (roleFetchAbortRef.current) {
+        roleFetchAbortRef.current.cancelled = true;
+      }
+
+      if (!nextSession?.user) {
+        // No user — clear everything and stop loading in one go
+        setSession(null);
+        setUser(null);
+        setUserRole(null);
+        setLoading(false);
+        return;
+      }
+
+      // We have a user — fetch their role before clearing the loading state
+      // so we never flash to /onboarding on a hard reload
+      const abort = { cancelled: false };
+      roleFetchAbortRef.current = abort;
+
       setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-      setUserRole((currentRole) => (nextSession?.user ? currentRole : null));
-      setRoleLoading(!!nextSession?.user);
-      setAuthLoading(false);
+      setUser(nextSession.user);
+      // Keep loading=true while we fetch the role
+
+      const role = await fetchUserRole(nextSession.user.id);
+
+      if (!mounted || abort.cancelled) return;
+
+      setUserRole(role);
+      setLoading(false);
     };
 
+    // Subscribe to future auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, nextSession) => {
-        applySession(nextSession);
+        resolveSession(nextSession);
       }
     );
 
+    // Resolve the initial session immediately
     supabase.auth.getSession().then(({ data: { session } }) => {
-      applySession(session);
+      resolveSession(session);
     });
 
     return () => {
       mounted = false;
+      if (roleFetchAbortRef.current) {
+        roleFetchAbortRef.current.cancelled = true;
+      }
       subscription.unsubscribe();
     };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadRole = async () => {
-      if (authLoading) return;
-
-      if (!user) {
-        setUserRole(null);
-        setRoleLoading(false);
-        return;
-      }
-
-      setRoleLoading(true);
-      const role = await fetchUserRole(user.id);
-      if (cancelled) return;
-
-      if (role === null) {
-        setUserRole(null);
-      } else {
-        setUserRole(role);
-      }
-      setRoleLoading(false);
-    };
-
-    loadRole();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoading, user, fetchUserRole]);
-
-  const loading = authLoading || roleLoading;
+  // fetchUserRole is stable (useCallback with no deps)
+  }, [fetchUserRole]);
 
   const signOut = async () => {
-    setAuthLoading(true);
-    setRoleLoading(false);
+    setLoading(true);
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setUserRole(null);
-    setRoleLoading(false);
-    setAuthLoading(false);
+    setLoading(false);
   };
 
   return (
