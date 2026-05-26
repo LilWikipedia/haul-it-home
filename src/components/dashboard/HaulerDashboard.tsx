@@ -21,6 +21,8 @@ type HaulRequest = {
   hauler_id: string | null;
 };
 
+const TERMINAL_STATUSES = ["delivered", "cancelled"] as const;
+
 const HaulerDashboard = () => {
   const { user } = useAuth();
   const [openJobs, setOpenJobs] = useState<HaulRequest[]>([]);
@@ -33,10 +35,23 @@ const HaulerDashboard = () => {
       setLoading(false);
       return;
     }
+
     const [{ data: open, error: openError }, { data: mine, error: mineError }] = await Promise.all([
-      supabase.from("haul_requests").select("*").eq("status", "open").order("created_at", { ascending: false }),
-      supabase.from("haul_requests").select("*").eq("hauler_id", user.id).not("status", "in", "(\"delivered\",\"cancelled\")").order("created_at", { ascending: false }),
+      supabase
+        .from("haul_requests")
+        .select("*")
+        .eq("status", "open")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("haul_requests")
+        .select("*")
+        .eq("hauler_id", user.id)
+        // Use neq chaining instead of fragile .not() string escaping
+        .neq("status", "delivered")
+        .neq("status", "cancelled")
+        .order("created_at", { ascending: false }),
     ]);
+
     if (openError) console.error("open jobs fetch error", openError);
     if (mineError) console.error("my jobs fetch error", mineError);
     setOpenJobs((open as HaulRequest[]) || []);
@@ -46,11 +61,16 @@ const HaulerDashboard = () => {
 
   useEffect(() => {
     fetchJobs();
+
     const channel = supabase
       .channel("hauler-jobs")
       .on("postgres_changes", { event: "*", schema: "public", table: "haul_requests" }, () => fetchJobs())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const claimJob = async (jobId: string) => {
@@ -61,6 +81,7 @@ const HaulerDashboard = () => {
       .update({ hauler_id: user.id, status: "claimed" as any })
       .eq("id", jobId)
       .eq("status", "open" as any);
+
     if (error) {
       toast.error("Failed to claim job");
     } else {
@@ -90,7 +111,9 @@ const HaulerDashboard = () => {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <Badge className="bg-primary/10 text-primary">{job.status.replace(/_/g, " ")}</Badge>
-                      {job.estimated_price && <span className="font-bold text-primary">${Number(job.estimated_price).toFixed(2)}</span>}
+                      {job.estimated_price && (
+                        <span className="font-bold text-primary">${Number(job.estimated_price).toFixed(2)}</span>
+                      )}
                     </div>
                     <p className="font-medium text-sm">{job.item_description}</p>
                     <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
@@ -113,7 +136,9 @@ const HaulerDashboard = () => {
 
         {loading ? (
           <div className="space-y-3">
-            {[1, 2, 3].map((i) => <div key={i} className="h-28 bg-muted animate-pulse rounded-xl" />)}
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-28 bg-muted animate-pulse rounded-xl" />
+            ))}
           </div>
         ) : openJobs.length === 0 ? (
           <Card>
@@ -138,7 +163,8 @@ const HaulerDashboard = () => {
                           </span>
                         )}
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" />{new Date(job.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          <Clock className="h-3 w-3" />
+                          {new Date(job.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
                       <p className="font-medium text-sm mb-2">{job.item_description}</p>
