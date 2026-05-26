@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -36,57 +36,102 @@ const Tracking = () => {
   const { user, userRole } = useAuth();
   const [haulerLocation, setHaulerLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [request, setRequest] = useState<any>(null);
+  // Use a ref so the realtime callback always sees the latest haulerId
+  // without needing to re-subscribe whenever request changes
+  const haulerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!id) return;
+
     const fetchRequest = async () => {
-      const { data } = await supabase.from("haul_requests").select("*").eq("id", id).maybeSingle();
+      const { data } = await supabase
+        .from("haul_requests")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
       setRequest(data);
 
       if (data?.hauler_id) {
-        const { data: loc } = await supabase.from("hauler_locations").select("*").eq("user_id", data.hauler_id).maybeSingle();
+        haulerIdRef.current = data.hauler_id;
+        const { data: loc } = await supabase
+          .from("hauler_locations")
+          .select("*")
+          .eq("user_id", data.hauler_id)
+          .maybeSingle();
         if (loc) setHaulerLocation({ lat: loc.lat, lng: loc.lng });
       }
     };
+
     fetchRequest();
 
-    // Subscribe to hauler location updates
+    // Subscribe to hauler location updates — use ref to avoid stale closure
     const channel = supabase
       .channel(`tracking-${id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "hauler_locations" }, (payload) => {
         const newLoc = payload.new as any;
-        if (request?.hauler_id && newLoc.user_id === request.hauler_id) {
+        // Read hauler_id from ref, not from closed-over `request` state
+        if (haulerIdRef.current && newLoc.user_id === haulerIdRef.current) {
           setHaulerLocation({ lat: newLoc.lat, lng: newLoc.lng });
         }
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id]);
 
-  // If hauler, broadcast location
+  // Keep haulerIdRef in sync whenever request loads
+  useEffect(() => {
+    if (request?.hauler_id) {
+      haulerIdRef.current = request.hauler_id;
+    }
+  }, [request]);
+
+  // If hauler, broadcast location every 10 seconds
   useEffect(() => {
     if (userRole !== "hauler" || !user) return;
-    
+
+    // Track whether a geolocation call is in-flight to prevent pile-up
+    let pending = false;
+
     const updateLocation = () => {
-      navigator.geolocation.getCurrentPosition(async (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        await supabase.from("hauler_locations").upsert({
-          user_id: user.id,
-          lat,
-          lng,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "user_id" });
-      });
+      if (pending) return;
+      pending = true;
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude: lat, longitude: lng } = pos.coords;
+          await supabase.from("hauler_locations").upsert(
+            {
+              user_id: user.id,
+              lat,
+              lng,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id" }
+          );
+          pending = false;
+        },
+        (err) => {
+          console.warn("Geolocation error:", err);
+          pending = false;
+        }
+      );
     };
 
     updateLocation();
     const interval = setInterval(updateLocation, 10000);
-    return () => clearInterval(interval);
+
+    return () => {
+      clearInterval(interval);
+      pending = false;
+    };
   }, [user, userRole]);
 
-  const center: [number, number] = haulerLocation 
-    ? [haulerLocation.lat, haulerLocation.lng] 
-    : [39.8283, -98.5795]; // US center
+  const center: [number, number] = haulerLocation
+    ? [haulerLocation.lat, haulerLocation.lng]
+    : [39.8283, -98.5795]; // US center fallback
 
   const statusLabels: Record<string, string> = {
     claimed: "Hauler Claimed",
@@ -101,7 +146,9 @@ const Tracking = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold">Live Tracking</h1>
-          {request && <Badge>{statusLabels[request.status] || request.status}</Badge>}
+          {request && (
+            <Badge>{statusLabels[request.status] || request.status}</Badge>
+          )}
         </div>
 
         <Card className="overflow-hidden">
