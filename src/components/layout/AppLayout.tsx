@@ -1,12 +1,12 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth-context";
-import { Truck, Home, PlusCircle, MapPin, User, History, MessageSquare, LogOut } from "lucide-react";
+import { Home, PlusCircle, User, History, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/yeehaul-logo.png";
 
 const AppLayout = ({ children }: { children: ReactNode }) => {
-  const { userRole, signOut, user } = useAuth();
+  const { userRole, signOut } = useAuth();
   const location = useLocation();
 
   const userNav = [
@@ -28,16 +28,40 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
     <div className="min-h-screen bg-background">
       {/* Top bar */}
       <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg border-b px-4 py-3">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link to="/dashboard" className="flex items-center gap-2">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+          <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
             <img src={logo} alt="YeeHaul" className="h-8 w-8" width={32} height={32} />
             <span className="font-bold font-['Space_Grotesk']">YeeHaul</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground capitalize px-2 py-1 bg-muted rounded-full">
+
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
+            {nav.map((item) => {
+              const active = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              to="/profile"
+              className="text-xs capitalize px-2 py-1 bg-muted hover:bg-muted/70 rounded-full transition-colors"
+              aria-label="View profile"
+            >
               {userRole}
-            </span>
-            <Button variant="ghost" size="icon" onClick={signOut}>
+            </Link>
+            <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sign out">
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
@@ -45,7 +69,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
       </header>
 
       {/* Content */}
-      <main className="max-w-5xl mx-auto px-4 py-6 pb-24">
+      <main className="max-w-5xl mx-auto px-4 py-6 pb-24 md:pb-6">
         {children}
       </main>
 
