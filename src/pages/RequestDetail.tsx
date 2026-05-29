@@ -199,11 +199,15 @@ const RequestDetail = () => {
         </Card>
 
         {/* Hauler actions */}
-        {canAdvance && (
-          <Button className="w-full gap-2" onClick={advanceStatus}>
-            Update Status <ArrowRight className="h-4 w-4" />
-          </Button>
-        )}
+        {canAdvance && (() => {
+          const currentIdx = statusFlow.indexOf(request.status as any);
+          const nextStatus = statusFlow[currentIdx + 1];
+          return (
+            <Button className="w-full gap-2" onClick={advanceStatus}>
+              Mark as: {statusLabels[nextStatus]} <ArrowRight className="h-4 w-4" />
+            </Button>
+          );
+        })()}
 
         {isOwner && request.status === "open" && (
           <Button variant="destructive" className="w-full" onClick={cancelRequest}>
