@@ -46,7 +46,7 @@ const NewRequest = () => {
         dropoff_lng: dropoffCoords?.lng ?? null,
         item_description: form.item_description,
         size_category: form.size_category as any,
-        estimated_price: priceEstimate(),
+        estimated_price: quote.total,
         timeframe: form.timeframe,
       });
       if (error) throw error;
