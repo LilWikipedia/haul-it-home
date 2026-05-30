@@ -128,14 +128,32 @@ const NewRequest = () => {
           </Card>
 
           <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Estimated Price</p>
-                <p className="text-2xl font-bold text-primary">${priceEstimate()}</p>
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Estimated Price</p>
+                  <p className="text-2xl font-bold text-primary">${quote.total.toFixed(2)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Distance</p>
+                  <p className="text-sm font-medium">
+                    {quote.hasDistance ? `${quote.miles!.toFixed(1)} mi` : "—"}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground max-w-[150px]">Based on item size. Final price may vary.</p>
+              <div className="text-xs text-muted-foreground border-t border-primary/10 pt-2">
+                {quote.hasDistance ? (
+                  <>
+                    Base ${quote.base.toFixed(2)} + ${quote.perMile.toFixed(2)}/mi × {quote.miles!.toFixed(1)} mi
+                    {quote.subtotal < quote.total && ` (${quote.size.replace("_", " ")} minimum $${quote.total.toFixed(2)})`}
+                  </>
+                ) : (
+                  <>Select pickup &amp; dropoff from suggestions to calculate per-mile pricing. Showing {quote.size.replace("_", " ")} minimum.</>
+                )}
+              </div>
             </CardContent>
           </Card>
+
 
           <Button type="submit" size="lg" className="w-full gap-2" disabled={loading}>
             {loading ? "Posting..." : "Post Haul Request"} <ArrowRight className="h-4 w-4" />
