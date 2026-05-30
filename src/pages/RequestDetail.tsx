@@ -57,6 +57,7 @@ const RequestDetail = () => {
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState(0);
   const [hasReviewed, setHasReviewed] = useState(false);
+  const [haulerLoc, setHaulerLoc] = useState<{ lat: number; lng: number } | null>(null);
   const messagesEnd = useRef<HTMLDivElement>(null);
 
   const fetchRequest = async () => {
