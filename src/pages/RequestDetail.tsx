@@ -9,13 +9,18 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { MapPin, Package, MessageSquare, ArrowRight, Send, Star } from "lucide-react";
 import { toast } from "sonner";
+import RouteMap from "@/components/RouteMap";
 
 type HaulRequest = {
   id: string;
   user_id: string;
   hauler_id: string | null;
   pickup_address: string;
+  pickup_lat: number | null;
+  pickup_lng: number | null;
   dropoff_address: string;
+  dropoff_lat: number | null;
+  dropoff_lng: number | null;
   item_description: string;
   size_category: string;
   status: string;
