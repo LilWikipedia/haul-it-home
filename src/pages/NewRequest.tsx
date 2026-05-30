@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MapPin, Package, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import AddressAutocomplete from "@/components/AddressAutocomplete";
+import { estimatePrice, type SizeCategory } from "@/lib/pricing";
 
 type Coords = { lat: number; lng: number } | null;
 
@@ -24,14 +25,11 @@ const NewRequest = () => {
     pickup_address: "",
     dropoff_address: "",
     item_description: "",
-    size_category: "medium" as "small" | "medium" | "large" | "extra_large",
+    size_category: "medium" as SizeCategory,
     timeframe: "asap",
   });
 
-  const priceEstimate = () => {
-    const basePrices = { small: 25, medium: 45, large: 75, extra_large: 120 };
-    return basePrices[form.size_category];
-  };
+  const quote = estimatePrice(form.size_category, pickupCoords, dropoffCoords);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
