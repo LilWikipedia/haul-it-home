@@ -237,6 +237,23 @@ const RequestDetail = () => {
           </CardContent>
         </Card>
 
+        {/* Map */}
+        {(request.pickup_lat || request.dropoff_lat || haulerLoc) && (
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <div className="h-[280px] md:h-[360px]">
+                <RouteMap
+                  pickup={request.pickup_lat && request.pickup_lng ? { lat: request.pickup_lat, lng: request.pickup_lng } : null}
+                  dropoff={request.dropoff_lat && request.dropoff_lng ? { lat: request.dropoff_lat, lng: request.dropoff_lng } : null}
+                  hauler={haulerLoc}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+
+
         {/* Hauler actions */}
         {canAdvance && (() => {
           const currentIdx = statusFlow.indexOf(request.status as any);
