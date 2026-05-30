@@ -4,18 +4,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Package, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import AddressAutocomplete from "@/components/AddressAutocomplete";
+
+type Coords = { lat: number; lng: number } | null;
 
 const NewRequest = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [pickupCoords, setPickupCoords] = useState<Coords>(null);
+  const [dropoffCoords, setDropoffCoords] = useState<Coords>(null);
   const [form, setForm] = useState({
     pickup_address: "",
     dropoff_address: "",
@@ -37,7 +41,11 @@ const NewRequest = () => {
       const { error } = await supabase.from("haul_requests").insert({
         user_id: user.id,
         pickup_address: form.pickup_address,
+        pickup_lat: pickupCoords?.lat ?? null,
+        pickup_lng: pickupCoords?.lng ?? null,
         dropoff_address: form.dropoff_address,
+        dropoff_lat: dropoffCoords?.lat ?? null,
+        dropoff_lng: dropoffCoords?.lng ?? null,
         item_description: form.item_description,
         size_category: form.size_category as any,
         estimated_price: priceEstimate(),
@@ -65,11 +73,23 @@ const NewRequest = () => {
             <CardContent className="space-y-3">
               <div className="space-y-2">
                 <Label>Pickup Address</Label>
-                <Input placeholder="Where should the hauler pick up?" value={form.pickup_address} onChange={(e) => setForm({ ...form, pickup_address: e.target.value })} required />
+                <AddressAutocomplete
+                  value={form.pickup_address}
+                  onChange={(v) => { setForm({ ...form, pickup_address: v }); setPickupCoords(null); }}
+                  onSelect={({ address, lat, lng }) => { setForm({ ...form, pickup_address: address }); setPickupCoords({ lat, lng }); }}
+                  placeholder="Where should the hauler pick up?"
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label>Dropoff Address</Label>
-                <Input placeholder="Where should it be delivered?" value={form.dropoff_address} onChange={(e) => setForm({ ...form, dropoff_address: e.target.value })} required />
+                <AddressAutocomplete
+                  value={form.dropoff_address}
+                  onChange={(v) => { setForm({ ...form, dropoff_address: v }); setDropoffCoords(null); }}
+                  onSelect={({ address, lat, lng }) => { setForm({ ...form, dropoff_address: address }); setDropoffCoords({ lat, lng }); }}
+                  placeholder="Where should it be delivered?"
+                  required
+                />
               </div>
             </CardContent>
           </Card>
