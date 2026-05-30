@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Home, PlusCircle, User, History, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/yeehaul-logo.png";
+import HaulerLocationBroadcaster from "@/components/HaulerLocationBroadcaster";
 
 const AppLayout = ({ children }: { children: ReactNode }) => {
   const { userRole, signOut } = useAuth();
@@ -26,6 +27,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="min-h-screen bg-background">
+      <HaulerLocationBroadcaster />
       {/* Top bar */}
       <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg border-b px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">

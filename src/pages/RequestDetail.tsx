@@ -9,13 +9,18 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { MapPin, Package, MessageSquare, ArrowRight, Send, Star } from "lucide-react";
 import { toast } from "sonner";
+import RouteMap from "@/components/RouteMap";
 
 type HaulRequest = {
   id: string;
   user_id: string;
   hauler_id: string | null;
   pickup_address: string;
+  pickup_lat: number | null;
+  pickup_lng: number | null;
   dropoff_address: string;
+  dropoff_lat: number | null;
+  dropoff_lng: number | null;
   item_description: string;
   size_category: string;
   status: string;
@@ -52,6 +57,7 @@ const RequestDetail = () => {
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState(0);
   const [hasReviewed, setHasReviewed] = useState(false);
+  const [haulerLoc, setHaulerLoc] = useState<{ lat: number; lng: number } | null>(null);
   const messagesEnd = useRef<HTMLDivElement>(null);
 
   const fetchRequest = async () => {
@@ -91,6 +97,39 @@ const RequestDetail = () => {
       supabase.removeChannel(msgChannel);
     };
   }, [id, user]);
+
+  // Subscribe to hauler live location once we know the hauler_id and job is active
+  useEffect(() => {
+    if (!request?.hauler_id) return;
+    const active = ["claimed", "en_route_pickup", "at_pickup", "in_transit"].includes(request.status);
+    if (!active) return;
+
+    let cancelled = false;
+    supabase
+      .from("hauler_locations")
+      .select("lat,lng")
+      .eq("user_id", request.hauler_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data) setHaulerLoc({ lat: data.lat, lng: data.lng });
+      });
+
+    const ch = supabase
+      .channel(`hauler-loc-${request.hauler_id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "hauler_locations", filter: `user_id=eq.${request.hauler_id}` },
+        (payload) => {
+          const n = payload.new as any;
+          if (n) setHaulerLoc({ lat: n.lat, lng: n.lng });
+        }
+      )
+      .subscribe();
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(ch);
+    };
+  }, [request?.hauler_id, request?.status]);
 
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
@@ -197,6 +236,23 @@ const RequestDetail = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Map */}
+        {(request.pickup_lat || request.dropoff_lat || haulerLoc) && (
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <div className="h-[280px] md:h-[360px]">
+                <RouteMap
+                  pickup={request.pickup_lat && request.pickup_lng ? { lat: request.pickup_lat, lng: request.pickup_lng } : null}
+                  dropoff={request.dropoff_lat && request.dropoff_lng ? { lat: request.dropoff_lat, lng: request.dropoff_lng } : null}
+                  hauler={haulerLoc}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+
 
         {/* Hauler actions */}
         {canAdvance && (() => {
