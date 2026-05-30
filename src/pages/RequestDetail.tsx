@@ -98,6 +98,39 @@ const RequestDetail = () => {
     };
   }, [id, user]);
 
+  // Subscribe to hauler live location once we know the hauler_id and job is active
+  useEffect(() => {
+    if (!request?.hauler_id) return;
+    const active = ["claimed", "en_route_pickup", "at_pickup", "in_transit"].includes(request.status);
+    if (!active) return;
+
+    let cancelled = false;
+    supabase
+      .from("hauler_locations")
+      .select("lat,lng")
+      .eq("user_id", request.hauler_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data) setHaulerLoc({ lat: data.lat, lng: data.lng });
+      });
+
+    const ch = supabase
+      .channel(`hauler-loc-${request.hauler_id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "hauler_locations", filter: `user_id=eq.${request.hauler_id}` },
+        (payload) => {
+          const n = payload.new as any;
+          if (n) setHaulerLoc({ lat: n.lat, lng: n.lng });
+        }
+      )
+      .subscribe();
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(ch);
+    };
+  }, [request?.hauler_id, request?.status]);
+
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
