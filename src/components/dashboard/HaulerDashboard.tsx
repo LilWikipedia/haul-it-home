@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Package, Clock, DollarSign, Truck } from "lucide-react";
+import { MapPin, Package, Clock, DollarSign, Truck, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 type HaulRequest = {
@@ -19,6 +19,7 @@ type HaulRequest = {
   created_at: string;
   user_id: string;
   hauler_id: string | null;
+  payment_status: string;
 };
 
 const TERMINAL_STATUSES = ["delivered", "cancelled"] as const;
@@ -110,7 +111,14 @@ const HaulerDashboard = () => {
                 <Card className="border-primary/20 hover:shadow-md transition-shadow cursor-pointer">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <Badge className="bg-primary/10 text-primary">{job.status.replace(/_/g, " ")}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-primary/10 text-primary">{job.status.replace(/_/g, " ")}</Badge>
+                        {job.payment_status !== "paid" && (
+                          <Badge variant="outline" className="text-yellow-600 border-yellow-400 gap-1 text-xs">
+                            <Lock className="h-2.5 w-2.5" /> Awaiting Payment
+                          </Badge>
+                        )}
+                      </div>
                       {job.estimated_price && (
                         <span className="font-bold text-primary">${Number(job.estimated_price).toFixed(2)}</span>
                       )}

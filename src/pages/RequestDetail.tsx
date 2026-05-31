@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import AppLayout from "@/components/layout/AppLayout";
@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { MapPin, Package, MessageSquare, ArrowRight, Send, Star } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MapPin, Package, MessageSquare, ArrowRight, Send, Star, CreditCard, AlertCircle, CheckCircle2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import RouteMap from "@/components/RouteMap";
 
@@ -27,6 +28,8 @@ type HaulRequest = {
   estimated_price: number | null;
   timeframe: string;
   created_at: string;
+  payment_status: string;
+  platform_fee: number | null;
 };
 
 type Message = {
@@ -49,16 +52,30 @@ const statusLabels: Record<string, string> = {
 
 const RequestDetail = () => {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, userRole } = useAuth();
   const navigate = useNavigate();
   const [request, setRequest] = useState<HaulRequest | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [payingNow, setPayingNow] = useState(false);
   const [rating, setRating] = useState(0);
   const [hasReviewed, setHasReviewed] = useState(false);
   const [haulerLoc, setHaulerLoc] = useState<{ lat: number; lng: number } | null>(null);
   const messagesEnd = useRef<HTMLDivElement>(null);
+
+  // Handle Stripe redirect back
+  useEffect(() => {
+    const paymentResult = searchParams.get("payment");
+    if (paymentResult === "success") {
+      toast.success("Payment confirmed! Your haul is underway.");
+      setSearchParams({}, { replace: true });
+    } else if (paymentResult === "cancelled") {
+      toast.info("Payment cancelled. Your haul is on hold until payment is completed.");
+      setSearchParams({}, { replace: true });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRequest = async () => {
     const { data } = await supabase.from("haul_requests").select("*").eq("id", id).maybeSingle();
@@ -96,7 +113,7 @@ const RequestDetail = () => {
       supabase.removeChannel(reqChannel);
       supabase.removeChannel(msgChannel);
     };
-  }, [id, user]);
+  }, [id, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Subscribe to hauler live location once we know the hauler_id and job is active
   useEffect(() => {
@@ -151,6 +168,41 @@ const RequestDetail = () => {
     toast.success(`Status updated to: ${statusLabels[nextStatus]}`);
   };
 
+  const handlePayNow = async () => {
+    if (!request || !user) return;
+    setPayingNow(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            request_id: request.id,
+            origin: window.location.origin,
+          }),
+        }
+      );
+
+      const result = await res.json();
+      if (result.error) throw new Error(result.error);
+      if (result.url) {
+        window.location.href = result.url;
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start checkout. Please try again.");
+    } finally {
+      setPayingNow(false);
+    }
+  };
+
   const submitReview = async () => {
     if (!user || !request || rating === 0) return;
     const revieweeId = user.id === request.user_id ? request.hauler_id : request.user_id;
@@ -181,7 +233,12 @@ const RequestDetail = () => {
   const isOwner = user?.id === request.user_id;
   const isHauler = user?.id === request.hauler_id;
   const canChat = isOwner || isHauler;
-  const canAdvance = isHauler && !["open", "delivered", "cancelled"].includes(request.status);
+  const isPaid = request.payment_status === "paid";
+  const paymentPending = request.payment_status === "pending";
+  // Hauler can only advance status if payment is confirmed
+  const canAdvance = isHauler && isPaid && !["open", "delivered", "cancelled"].includes(request.status);
+  // Show payment banner to the owner when job is claimed but not yet paid
+  const needsPayment = isOwner && !["open", "cancelled"].includes(request.status) && !isPaid;
 
   return (
     <AppLayout>
@@ -200,17 +257,61 @@ const RequestDetail = () => {
           )}
         </div>
 
-        {/* Status progress */}
+        {/* Status progress bar */}
         {request.status !== "open" && request.status !== "cancelled" && (
           <div className="flex items-center gap-1">
             {statusFlow.map((s, i) => {
               const currentIdx = statusFlow.indexOf(request.status as any);
               const done = i <= currentIdx;
-              return (
-                <div key={s} className={`h-2 flex-1 rounded-full ${done ? "bg-primary" : "bg-muted"}`} />
-              );
+              return <div key={s} className={`h-2 flex-1 rounded-full ${done ? "bg-primary" : "bg-muted"}`} />;
             })}
           </div>
+        )}
+
+        {/* ── Payment banner (owner only, when payment is needed) ── */}
+        {needsPayment && (
+          <Alert className={`border-2 ${paymentPending ? "border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20" : "border-orange-400 bg-orange-50 dark:bg-orange-950/20"}`}>
+            <AlertCircle className={`h-4 w-4 ${paymentPending ? "text-yellow-600" : "text-orange-600"}`} />
+            <AlertDescription className="flex items-center justify-between gap-4">
+              <div>
+                <p className={`font-semibold text-sm ${paymentPending ? "text-yellow-800 dark:text-yellow-300" : "text-orange-800 dark:text-orange-300"}`}>
+                  {paymentPending ? "Complete your payment" : "Payment required"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {paymentPending
+                    ? "You have a checkout session open. Click below to finish paying."
+                    : "A hauler has claimed your job. Pay now to confirm and get it moving."}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={handlePayNow}
+                disabled={payingNow}
+                className="shrink-0 gap-1.5"
+              >
+                <CreditCard className="h-3.5 w-3.5" />
+                {payingNow ? "Loading..." : `Pay $${Number(request.estimated_price ?? 0).toFixed(2)}`}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Payment confirmed badge (owner) */}
+        {isOwner && isPaid && request.status !== "open" && (
+          <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+            <CheckCircle2 className="h-4 w-4" />
+            <span className="font-medium">Payment confirmed</span>
+          </div>
+        )}
+
+        {/* Hauler — waiting on payment notice */}
+        {isHauler && !isPaid && !["open", "cancelled", "delivered"].includes(request.status) && (
+          <Alert className="border-yellow-300 bg-yellow-50 dark:bg-yellow-950/20">
+            <Lock className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="text-sm text-yellow-800 dark:text-yellow-300">
+              <span className="font-semibold">Waiting for customer payment.</span> You'll be able to update the job status once payment is confirmed.
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Locations */}
@@ -252,9 +353,7 @@ const RequestDetail = () => {
           </Card>
         )}
 
-
-
-        {/* Hauler actions */}
+        {/* Hauler: advance status (gated on payment) */}
         {canAdvance && (() => {
           const currentIdx = statusFlow.indexOf(request.status as any);
           const nextStatus = statusFlow[currentIdx + 1];
@@ -265,17 +364,20 @@ const RequestDetail = () => {
           );
         })()}
 
+        {/* Owner: cancel (only when open) */}
         {isOwner && request.status === "open" && (
           <Button variant="destructive" className="w-full" onClick={cancelRequest}>
             Cancel Request
           </Button>
         )}
 
-        {/* Review section */}
+        {/* Review section (after delivery) */}
         {request.status === "delivered" && canChat && !hasReviewed && (
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2"><Star className="h-4 w-4 text-primary" /> Leave a Review</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Star className="h-4 w-4 text-primary" /> Leave a Review
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex gap-1">
@@ -290,15 +392,19 @@ const RequestDetail = () => {
           </Card>
         )}
 
-        {/* Chat */}
+        {/* Chat (available once claimed, for both parties) */}
         {canChat && request.status !== "open" && (
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Messages</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" /> Messages
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="max-h-64 overflow-y-auto space-y-2 mb-3">
-                {messages.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No messages yet</p>}
+                {messages.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No messages yet</p>
+                )}
                 {messages.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.sender_id === user?.id ? "justify-end" : "justify-start"}`}>
                     <div className={`max-w-[80%] px-3 py-2 rounded-xl text-sm ${msg.sender_id === user?.id ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
@@ -309,7 +415,12 @@ const RequestDetail = () => {
                 <div ref={messagesEnd} />
               </div>
               <form onSubmit={sendMessage} className="flex gap-2">
-                <Input placeholder="Type a message..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} className="flex-1" />
+                <Input
+                  placeholder="Type a message..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  className="flex-1"
+                />
                 <Button type="submit" size="icon"><Send className="h-4 w-4" /></Button>
               </form>
             </CardContent>
