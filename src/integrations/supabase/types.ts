@@ -24,12 +24,15 @@ export type Database = {
           hauler_id: string | null
           id: string
           item_description: string
+          payment_status: string
           photo_url: string | null
           pickup_address: string
           pickup_lat: number | null
           pickup_lng: number | null
+          platform_fee: number | null
           size_category: Database["public"]["Enums"]["size_category"]
           status: Database["public"]["Enums"]["haul_status"]
+          stripe_checkout_session_id: string | null
           timeframe: string
           updated_at: string
           user_id: string
@@ -43,12 +46,15 @@ export type Database = {
           hauler_id?: string | null
           id?: string
           item_description: string
+          payment_status?: string
           photo_url?: string | null
           pickup_address: string
           pickup_lat?: number | null
           pickup_lng?: number | null
+          platform_fee?: number | null
           size_category?: Database["public"]["Enums"]["size_category"]
           status?: Database["public"]["Enums"]["haul_status"]
+          stripe_checkout_session_id?: string | null
           timeframe?: string
           updated_at?: string
           user_id: string
@@ -62,12 +68,15 @@ export type Database = {
           hauler_id?: string | null
           id?: string
           item_description?: string
+          payment_status?: string
           photo_url?: string | null
           pickup_address?: string
           pickup_lat?: number | null
           pickup_lng?: number | null
+          platform_fee?: number | null
           size_category?: Database["public"]["Enums"]["size_category"]
           status?: Database["public"]["Enums"]["haul_status"]
+          stripe_checkout_session_id?: string | null
           timeframe?: string
           updated_at?: string
           user_id?: string
