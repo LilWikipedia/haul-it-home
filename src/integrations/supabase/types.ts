@@ -144,8 +144,10 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           full_name: string
+          hauler_terms_accepted_at: string | null
           id: string
           phone: string | null
+          terms_accepted_at: string | null
           updated_at: string
           user_id: string
         }
@@ -153,8 +155,10 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           full_name?: string
+          hauler_terms_accepted_at?: string | null
           id?: string
           phone?: string | null
+          terms_accepted_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -162,8 +166,10 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           full_name?: string
+          hauler_terms_accepted_at?: string | null
           id?: string
           phone?: string | null
+          terms_accepted_at?: string | null
           updated_at?: string
           user_id?: string
         }
