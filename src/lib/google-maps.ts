@@ -17,10 +17,9 @@ export function loadGoogleMaps(): Promise<typeof window.google> {
   if (window.google?.maps) return Promise.resolve(window.google);
   if (loadPromise) return loadPromise;
 
-  const key = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY;
-  const channel = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID;
+  const key = import.meta.env.VITE_GOOGLE_MAPS_KEY;
   if (!key) {
-    return Promise.reject(new Error("Missing Google Maps browser key"));
+    return Promise.reject(new Error("Missing VITE_GOOGLE_MAPS_KEY in .env"));
   }
 
   loadPromise = new Promise((resolve, reject) => {
@@ -33,7 +32,6 @@ export function loadGoogleMaps(): Promise<typeof window.google> {
       libraries: "places,marker",
       v: "weekly",
     });
-    if (channel) params.set("channel", channel);
     script.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`;
     script.async = true;
     script.onerror = () => reject(new Error("Failed to load Google Maps script"));
